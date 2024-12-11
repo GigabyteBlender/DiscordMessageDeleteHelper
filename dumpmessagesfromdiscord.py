@@ -5,7 +5,8 @@ import re
 
 def save_messages(messages: Dict[str, List[int]]):
 	print('creating file...')
-	with open(r"C:\Users\danpe\Downloads\messages.csv", "w+", encoding='utf8') as f:
+	#change the directory to where you want to create the file/open
+	with open(r"C:\Users\######\######\messages.csv", "w+", encoding='utf8') as f:
 		f.write('channelid,messageid\n')
 		for channel in messages.items():
 			channel = re.sub('[^A-Za-z0-9]+','', str(channel))
@@ -41,7 +42,8 @@ def dump_dir(path: str) -> List[int]:
 
 def dump_all() -> Dict[str, List[int]]:
 	messages = {}
-	for channel in os.listdir(r"C:\Users\danpe\Downloads\package\messages"):
+	#change the directory to where the messages folder is from the discord package
+	for channel in os.listdir(r"C:\Users\######\######\package\messages"):
 		path = f'messages/{channel}'
 
 		channel_id = channel.replace('c', '', 1)
