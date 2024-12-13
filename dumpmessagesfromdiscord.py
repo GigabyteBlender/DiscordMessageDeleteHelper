@@ -21,6 +21,7 @@ class DumpAllMessages:
         self.usrName = None
         self.directory_path = None
         self.save_directory_path = None
+        self.exclude_channels = []
         self.root = None
 
     def save_messages(self, messages: Dict[str, List[int]], save_path: str) -> None:
@@ -34,10 +35,11 @@ class DumpAllMessages:
         file_path = os.path.join(save_path, "messages.txt")
         with open(file_path, "w+") as f:
             for channel_id, message_ids in messages.items():
-                print(f'Saving messages from channel: {channel_id}')
-                f.write(f'{channel_id}:\n\n')
-                f.write(', '.join(map(str, message_ids)))
-                f.write('\n\n')
+                if channel_id not in self.exclude_channels:
+                    print(f'Saving messages from channel: {channel_id}')
+                    f.write(f'{channel_id}:\n\n')
+                    f.write(', '.join(map(str, message_ids)))
+                    f.write('\n\n')
 
     def dump_dir(self, path: str) -> List[int]:
         """
@@ -91,21 +93,34 @@ class DumpAllMessages:
         """
         self.usrName = username
 
-    def select_directory(self, label) -> None:
+    def select_directory(self, label, button) -> None:
         """
         Prompt the user to select the directory path and update the label.
         """
         self.directory_path = filedialog.askdirectory()
         if self.directory_path:
             label.config(text=f"Selected Directory: {self.directory_path}")
+            button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
 
-    def select_save_directory(self, label) -> None:
+    def select_save_directory(self, label, button) -> None:
         """
         Prompt the user to select the directory path for saving messages.txt and update the label.
         """
         self.save_directory_path = filedialog.askdirectory()
         if self.save_directory_path:
             label.config(text=f"Save Directory: {self.save_directory_path}")
+            button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
+
+    def set_exclude_channels(self, entry, button) -> None:
+        """
+        Set the list of channel IDs to exclude from the output.
+        """
+        exclude_channels_str = entry.get()
+        self.exclude_channels = [channel.strip() for channel in exclude_channels_str.split(',')]
+        print('excluding channels:\n')
+        for channel in self.exclude_channels:
+            print(channel)
+        button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
 
     def main(self, console_redirector) -> None:
         """
@@ -129,12 +144,12 @@ class GUI:
             screen_width = window.winfo_screenwidth()
             screen_height = window.winfo_screenheight()
             x = (screen_width - width) // 2
-            y = (screen_height - height) // 3
+            y = (screen_height - height) // 2
             window.geometry(f"{width}x{height}+{x}+{y}")
 
         # Set the window size
         window_width = 600
-        window_height = 500
+        window_height = 600
         center_window(self.root, window_width, window_height)
 
         # Label and Entry for Discord Username
@@ -145,12 +160,21 @@ class GUI:
         # Button to Select Directory
         self.directory_label = tk.Label(self.root, text="Selected Directory: ")
         self.directory_label.pack()
-        tk.Button(self.root, text="Select 'package' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label)).pack()
+        directory_button = tk.Button(self.root, text="Select 'package' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
+        directory_button.pack()
 
         # Button to Select Save Directory
         self.save_directory_label = tk.Label(self.root, text="Save Directory: ")
         self.save_directory_label.pack()
-        tk.Button(self.root, text="Select Save Directory", command=lambda: self.dump_messages.select_save_directory(self.save_directory_label)).pack()
+        save_directory_button = tk.Button(self.root, text="Select Save Directory", command=lambda: self.dump_messages.select_save_directory(self.save_directory_label, save_directory_button))
+        save_directory_button.pack()
+
+        # Label and Entry for Exclude Channels
+        tk.Label(self.root, text="Enter channel IDs to exclude (comma-separated):").pack()
+        self.exclude_channels_entry = tk.Entry(self.root)
+        self.exclude_channels_entry.pack()
+        exclude_channels_button = tk.Button(self.root, text="Set Exclude Channels", command=lambda: self.dump_messages.set_exclude_channels(self.exclude_channels_entry, exclude_channels_button))
+        exclude_channels_button.pack()
 
         # Text widget to display console output without vertical scrollbar
         self.console_output = tk.Text(self.root, width=70, height=20, wrap=tk.WORD)
@@ -170,7 +194,8 @@ class GUI:
             else:
                 print("Please fill in all fields.")
 
-        tk.Button(self.root, text="Proceed", command=proceed_modal).pack()
+        proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)
+        proceed_button.pack()
 
     def run(self) -> None:
         self.root.mainloop()
