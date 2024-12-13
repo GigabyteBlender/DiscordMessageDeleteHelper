@@ -123,11 +123,19 @@ class GUI:
         self.dump_messages = DumpAllMessages()
         self.dump_messages.root = self.root = tk.Tk()
         self.root.title("Discord Message Dumper")
+
+        # Function to center the window
+        def center_window(window, width, height):
+            screen_width = window.winfo_screenwidth()
+            screen_height = window.winfo_screenheight()
+            x = (screen_width - width) // 2
+            y = (screen_height - height) // 3
+            window.geometry(f"{width}x{height}+{x}+{y}")
+
         # Set the window size
-        self.root.geometry("600x500")
-        self.root.minsize(600, 500)
-        self.root.maxsize(600, 500)
-        self.root.resizable(False, False)
+        window_width = 600
+        window_height = 500
+        center_window(self.root, window_width, window_height)
 
         # Label and Entry for Discord Username
         tk.Label(self.root, text="Enter your Discord username:").pack()
@@ -149,19 +157,7 @@ class GUI:
         self.console_output.pack(fill=tk.BOTH, expand=True)
 
         # Redirect sys.stdout to the Text widget
-        class ConsoleRedirector:
-            def __init__(self, text_widget):
-                self.text_widget = text_widget
-
-            def write(self, message):
-                self.text_widget.insert(tk.END, message)
-                self.text_widget.see(tk.END)
-
-            def flush(self):
-                pass
-
         self.console_redirector = ConsoleRedirector(self.console_output)
-        import sys
         sys.stdout = self.console_redirector
 
         # Button to Proceed with modal behavior
@@ -176,7 +172,7 @@ class GUI:
 
         tk.Button(self.root, text="Proceed", command=proceed_modal).pack()
 
-    def run(self):
+    def run(self) -> None:
         self.root.mainloop()
 
 if __name__ == "__main__":
