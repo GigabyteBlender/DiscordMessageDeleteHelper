@@ -1,4 +1,5 @@
-# discord-channel-and-messages-get
+# discord messages delete helper
+
 decided on the idea from: https://github.com/ishnz/bulk_deletion_helper
 
 This version of the code works slightly better in my opinion. there were a few problems in the original code when trying to find the discord package file and where to create the messages.txt file
