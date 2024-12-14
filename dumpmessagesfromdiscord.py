@@ -35,11 +35,12 @@ class DumpAllMessages:
         file_path = os.path.join(save_path, "messages.txt")
         with open(file_path, "w+") as f:
             for channel_id, message_ids in messages.items():
-                if channel_id not in self.exclude_channels:
-                    print(f'Saving messages from channel: {channel_id}')
-                    f.write(f'{channel_id}:\n\n')
-                    f.write(', '.join(map(str, message_ids)))
-                    f.write('\n\n')
+                if len(channel_id) == 18 and channel_id.isnumeric() == True:  # Check if it's a channel ID
+                    if channel_id not in self.exclude_channels:
+                        print(f'Saving messages from channel: {channel_id}')
+                        f.write(f'{channel_id}:\n\n')
+                        f.write(', '.join(map(str, message_ids)))
+                        f.write('\n\n')
 
     def dump_dir(self, path: str) -> List[int]:
         """
@@ -100,7 +101,7 @@ class DumpAllMessages:
         self.directory_path = filedialog.askdirectory()
         if self.directory_path:
             label.config(text=f"Selected Directory: {self.directory_path}")
-            button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
+            button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
 
     def select_save_directory(self, label, button) -> None:
         """
@@ -109,7 +110,7 @@ class DumpAllMessages:
         self.save_directory_path = filedialog.askdirectory()
         if self.save_directory_path:
             label.config(text=f"Save Directory: {self.save_directory_path}")
-            button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
+            button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
 
     def set_exclude_channels(self, entry, button) -> None:
         """
@@ -120,7 +121,7 @@ class DumpAllMessages:
         print('excluding channels:\n')
         for channel in self.exclude_channels:
             print(channel)
-        button.config(bg='#666666', fg='grey')  # Change button color to dark gray with white text
+        button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
 
     def main(self, console_redirector) -> None:
         """
