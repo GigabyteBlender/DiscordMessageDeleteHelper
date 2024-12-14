@@ -161,7 +161,7 @@ class GUI:
         # Button to Select Directory
         self.directory_label = tk.Label(self.root, text="Selected Directory: ")
         self.directory_label.pack()
-        directory_button = tk.Button(self.root, text="Select 'package' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
+        directory_button = tk.Button(self.root, text="Select 'messages' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
         directory_button.pack()
 
         # Button to Select Save Directory
