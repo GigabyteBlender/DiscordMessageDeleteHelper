@@ -47,8 +47,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 Authorization Complete. You can now close this window.
                             </h1>
                             <script>
-                                setTimeout(function() { window.close(); }, 1000);
+                                JavaScript:window.close()
                             </script>
+
                         </body>
                     </html>
                     ''')    
