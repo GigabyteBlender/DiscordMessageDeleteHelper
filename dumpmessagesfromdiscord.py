@@ -5,6 +5,19 @@ import tkinter as tk
 from tkinter import filedialog
 from typing import Dict, List
 import requests
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import webbrowser
+import threading
+
+# Replace these with your actual Discord application credentials
+CLIENT_ID = '1319665737412907109'
+CLIENT_SECRET = '8Sa2WtHUHid_MtgnZnE_TuEh3y7z9xLM'
+REDIRECT_URI = 'http://localhost:8000/callback'
+SCOPE = 'identify email'  # Corrected scope
+
+# Generate the authorization URL
+auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={urllib.parse.quote(REDIRECT_URI)}&response_type=code&scope={urllib.parse.quote(SCOPE)}"
 
 class ConsoleRedirector:
     def __init__(self, text_widget):
@@ -26,17 +39,11 @@ class DumpAllMessages:
         self.root = None
 
     def save_messages(self, messages: Dict[str, List[int]], save_path: str) -> None:
-        """
-        Save the messages to a file.
-
-        :param messages: A dictionary where keys are channel IDs and values are lists of message IDs.
-        :param save_path: The path where the messages.txt file will be saved.
-        """
         print('Creating file...')
         file_path = os.path.join(save_path, "messages.txt")
         with open(file_path, "w+") as f:
             for channel_id, message_ids in messages.items():
-                if len(channel_id) == 18 and channel_id.isnumeric() == True:  # Check if it's a channel ID
+                if len(channel_id) == 18 and channel_id.isnumeric():
                     if channel_id not in self.exclude_channels:
                         print(f'Saving messages from channel: {channel_id}')
                         f.write(f'{channel_id}:\n\n')
@@ -44,21 +51,13 @@ class DumpAllMessages:
                         f.write('\n\n')
 
     def dump_dir(self, path: str) -> List[int]:
-        """
-        Dump message IDs from a directory.
-
-        :param path: The path to the directory containing the messages.json file.
-        :return: A list of message IDs.
-        """
         messages = []
         if not os.path.isdir(path):
             return messages
-
         file_path = f'{path}/messages.json'
         if not os.path.exists(file_path):
             print(f'No messages found in: {path}')
             return messages
-
         print(f'Dumping messages from: {path}')
         try:
             with open(file_path, 'r', encoding='utf8') as f:
@@ -67,110 +66,93 @@ class DumpAllMessages:
                     messages.append(message['ID'])
         except json.JSONDecodeError as e:
             print(f"Error parsing JSON in {file_path}: {e}")
-
+            return messages
         return messages
 
     def dump_all(self) -> Dict[str, List[int]]:
-        """
-        Dump all messages from the messages directory.
-
-        :return: A dictionary where keys are channel IDs and values are lists of message IDs.
-        """
         if not self.directory_path:
             raise ValueError("Directory path not set")
-
         messages = {}
         for channel in os.listdir(self.directory_path):
             path = os.path.join(self.directory_path, channel)
             channel_id = channel.replace('c', '', 1)
             messages[channel_id] = self.dump_dir(path)
-
         return messages
 
     def user_info(self, username: str) -> None:
-        """
-        Set the Discord username.
-
-        :param username: The Discord username.
-        """
         self.usrName = username
 
     def select_directory(self, label, button) -> None:
-        """
-        Prompt the user to select the directory path and update the label.
-        """
         self.directory_path = filedialog.askdirectory()
         if self.directory_path:
             label.config(text=f"Selected Directory: {self.directory_path}")
-            button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
+            button.config(bg='#444444', fg='grey')
 
     def select_save_directory(self, label, button) -> None:
-        """
-        Prompt the user to select the directory path for saving messages.txt and update the label.
-        """
         self.save_directory_path = filedialog.askdirectory()
         if self.save_directory_path:
             label.config(text=f"Save Directory: {self.save_directory_path}")
-            button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
+            button.config(bg='#444444', fg='grey')
 
     def set_exclude_channels(self, entry, button) -> None:
-        """
-        Set the list of channel IDs to exclude from the output.
-        """
         exclude_channels_str = entry.get()
         self.exclude_channels = [channel.strip() for channel in exclude_channels_str.split(',')]
         print('excluding channels:\n')
         for channel in self.exclude_channels:
             print(channel)
-        button.config(bg='#444444', fg='grey')  # Change button color to dark gray with white text
+        button.config(bg='#444444', fg='grey')
 
     def main(self, console_redirector) -> None:
-        """
-        Main entry point of the script.
-        """
         try:
             messages = self.dump_all()
             self.save_messages(messages, self.save_directory_path)
             print("Dumped to messages.txt!")
         except Exception as e:
             print(f"An error occurred: {e}")
-            
-class DiscordCommands:
-    
-    def getApplication(self):
-        url = "https://discord.com/api/v10/applications/@me"
 
-        payload = {}
-        headers = {
-        'Accept': 'application/json'
-        }
+class RequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path.startswith('/callback'):
+            code = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)['code'][0]
+            token_response = requests.post(
+                'https://discord.com/api/oauth2/token',
+                data={
+                    'client_id': CLIENT_ID,
+                    'client_secret': CLIENT_SECRET,
+                    'code': code,
+                    'grant_type': 'authorization_code',
+                    'redirect_uri': REDIRECT_URI,
+                },
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+            token_data = token_response.json()
+            access_token = token_data.get('access_token')
+            user_response = requests.get(
+                'https://discord.com/api/users/@me',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+            user_data = user_response.json()
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(f'User Data: {user_data}'.encode())
 
-        response = requests.request("GET", url, headers=headers, data=payload)
+def run_server():
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, RequestHandler)
+    print('Starting httpd on port 8000...')
+    httpd.serve_forever()
 
-        print(response.text)
-        
-    def getUser(self):
-        url = "https://discord.com/api/v10/oauth2/applications/@me"
+def start_server_and_open_auth_url():
+    threading.Thread(target=run_server).start()
+    webbrowser.open(auth_url)
 
-        payload = {}
-        headers = {
-        'Accept': 'application/json'
-        }
-        
-        print('getting user info')
-        response = requests.request("GET", url, headers=headers, data=payload)
-
-        print(response.text)   
-    
 class GUI:
-
     def __init__(self):
         self.dump_messages = DumpAllMessages()
-        self.discord_command = DiscordCommands()
         self.dump_messages.root = self.root = tk.Tk()
         self.root.title("Discord Message Dumper")
 
-        # Function to center the window
         def center_window(window, width, height):
             screen_width = window.winfo_screenwidth()
             screen_height = window.winfo_screenheight()
@@ -178,48 +160,38 @@ class GUI:
             y = (screen_height - height) // 2
             window.geometry(f"{width}x{height}+{x}+{y}")
 
-        # Set the window size
         window_width = 600
         window_height = 600
         center_window(self.root, window_width, window_height)
 
-        # Label and Entry for Discord Username
-        tk.Label(self.root, text="Get user info:").pack()
-        self.username_entry = tk.Button(self.root, text="initilize", command=lambda: self.discord_command.getUser())
-        self.username_entry.pack()
+        tk.Label(self.root, text="Initialize Discord OAuth").pack()
+        self.oauth_button = tk.Button(self.root, text="Initialize", command=start_server_and_open_auth_url)
+        self.oauth_button.pack()
 
-        # Button to Select Directory
         self.directory_label = tk.Label(self.root, text="Selected Directory: ")
         self.directory_label.pack()
         directory_button = tk.Button(self.root, text="Select 'messages' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
         directory_button.pack()
 
-        # Button to Select Save Directory
         self.save_directory_label = tk.Label(self.root, text="Save Directory: ")
         self.save_directory_label.pack()
         save_directory_button = tk.Button(self.root, text="Select Save Directory", command=lambda: self.dump_messages.select_save_directory(self.save_directory_label, save_directory_button))
         save_directory_button.pack()
 
-        # Label and Entry for Exclude Channels
         tk.Label(self.root, text="Enter channel IDs to exclude (comma-separated):").pack()
         self.exclude_channels_entry = tk.Entry(self.root)
         self.exclude_channels_entry.pack()
         exclude_channels_button = tk.Button(self.root, text="Set Exclude Channels", command=lambda: self.dump_messages.set_exclude_channels(self.exclude_channels_entry, exclude_channels_button))
         exclude_channels_button.pack()
 
-        # Text widget to display console output without vertical scrollbar
         self.console_output = tk.Text(self.root, width=70, height=20, wrap=tk.WORD)
         self.console_output.pack(fill=tk.BOTH, expand=True)
 
-        # Redirect sys.stdout to the Text widget
         self.console_redirector = ConsoleRedirector(self.console_output)
         sys.stdout = self.console_redirector
 
-        # Button to Proceed with modal behavior
         def proceed_modal():
-            username = self.username_entry.get()
-            if username and self.dump_messages.directory_path and self.dump_messages.save_directory_path:
-                self.dump_messages.user_info(username)
+            if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
                 self.dump_messages.main(self.console_redirector)
                 print("Process completed. You can now close the window.")
             else:
