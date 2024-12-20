@@ -6,6 +6,7 @@ from utils import DumpAllMessages, ConsoleRedirector
 from config import CLIENT_ID, REDIRECT_URI, SCOPE
 import urllib.parse
 import sys
+import os
 
 class GUI:
     def __init__(self):
@@ -63,9 +64,8 @@ class GUI:
         proceed_button.pack()
 
     def start_server_and_open_auth_url(self):
-        import os
         os.system("python server.py &")
-        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
+        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={urllib.parse.quote(REDIRECT_URI)}&response_type=code&scope={urllib.parse.quote(SCOPE)}"
         webbrowser.open(auth_url)
 
     def run(self) -> None:
