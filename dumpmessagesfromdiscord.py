@@ -2,8 +2,9 @@ import json
 import os
 import sys
 import tkinter as tk
-from tkinter import filedialog, scrolledtext
+from tkinter import filedialog
 from typing import Dict, List
+import requests
 
 class ConsoleRedirector:
     def __init__(self, text_widget):
@@ -133,10 +134,39 @@ class DumpAllMessages:
             print("Dumped to messages.txt!")
         except Exception as e:
             print(f"An error occurred: {e}")
+            
+class DiscordCommands:
+    
+    def getApplication(self):
+        url = "https://discord.com/api/v10/applications/@me"
 
+        payload = {}
+        headers = {
+        'Accept': 'application/json'
+        }
+
+        response = requests.request("GET", url, headers=headers, data=payload)
+
+        print(response.text)
+        
+    def getUser(self):
+        url = "https://discord.com/api/v10/oauth2/applications/@me"
+
+        payload = {}
+        headers = {
+        'Accept': 'application/json'
+        }
+        
+        print('getting user info')
+        response = requests.request("GET", url, headers=headers, data=payload)
+
+        print(response.text)   
+    
 class GUI:
+
     def __init__(self):
         self.dump_messages = DumpAllMessages()
+        self.discord_command = DiscordCommands()
         self.dump_messages.root = self.root = tk.Tk()
         self.root.title("Discord Message Dumper")
 
@@ -154,8 +184,8 @@ class GUI:
         center_window(self.root, window_width, window_height)
 
         # Label and Entry for Discord Username
-        tk.Label(self.root, text="Enter your Discord username:").pack()
-        self.username_entry = tk.Entry(self.root)
+        tk.Label(self.root, text="Get user info:").pack()
+        self.username_entry = tk.Button(self.root, text="initilize", command=lambda: self.discord_command.getUser())
         self.username_entry.pack()
 
         # Button to Select Directory
