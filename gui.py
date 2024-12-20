@@ -1,11 +1,11 @@
-# gui.py
 import tkinter as tk
 from tkinter import filedialog
 import webbrowser
 import threading
-import sys
 from utils import DumpAllMessages, ConsoleRedirector
 from config import CLIENT_ID, REDIRECT_URI, SCOPE
+import urllib.parse
+import sys
 
 class GUI:
     def __init__(self):
@@ -24,7 +24,8 @@ class GUI:
         window_height = 600
         center_window(self.root, window_width, window_height)
 
-        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
+        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={urllib.parse.quote(REDIRECT_URI)}&response_type=code&scope={urllib.parse.quote(SCOPE)}"
+
         tk.Label(self.root, text="Initialize Discord OAuth").pack()
         self.oauth_button = tk.Button(self.root, text="Initialize", command=lambda: [threading.Thread(target=self.start_server_and_open_auth_url).start()])
         self.oauth_button.pack()
