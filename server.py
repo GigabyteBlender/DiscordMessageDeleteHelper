@@ -19,7 +19,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                     data={
                         'client_id': CLIENT_ID,  # Discord client ID
                         'client_secret': CLIENT_SECRET,  # Discord client secret
-                        'code': code,  # Authorization code
+                        'code': code,  # Authorization code received from Discord
                         'grant_type': 'authorization_code',  # Grant type for OAuth
                         'redirect_uri': REDIRECT_URI,  # Redirect URI registered with Discord
                     },
