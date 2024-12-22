@@ -3,7 +3,7 @@ import webbrowser
 import threading
 import server
 import concurrent.futures
-from utils import DumpAllMessages, ConsoleRedirector, DiscordAPI
+from utils import DumpAllMessages, ConsoleRedirector
 from config import CLIENT_ID, REDIRECT_URI, SCOPE
 import sys
 
@@ -12,7 +12,6 @@ class GUI:
         # Initialize the message dumper and set up the main application window
         self.dump_messages = DumpAllMessages()
         self.dump_messages.root = self.root = tk.Tk()
-        self.discord_api = DiscordAPI()
         self.root.title("Discord Message Dumper")
 
         # Function to center the window on the screen
