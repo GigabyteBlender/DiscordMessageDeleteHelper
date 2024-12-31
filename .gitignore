@@ -1,4 +1,4 @@
 *.tmp
 config.py
-__pycache__/config.cpython-313.pyc
+config.cpython-313.pyc
 data.txt
