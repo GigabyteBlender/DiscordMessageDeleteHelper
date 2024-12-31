@@ -23,18 +23,17 @@ class GUI:
             window.geometry(f"{width}x{height}+{x}+{y}")
 
         # Set window size and center it
-        window_width = 600
-        window_height = 600
+        window_width = 650
+        window_height = 650
         center_window(self.root, window_width, window_height)
 
         # Add a button to initialize Discord OAuth process
         tk.Label(self.root, text="Initialize Discord OAuth").pack()
         self.oauth_button = tk.Button(self.root, text="Initialize", command=lambda: [threading.Thread(target=self.start_server_and_open_auth_url).start()])
         self.oauth_button.pack()
-
+        
         # Add UI elements for selecting input and output directories
-        self.directory_label = tk.Label(self.root, text="Selected Directory: ")
-        self.directory_label.pack()
+        tk.Label(self.root, text="Selected Directory: ").pack()
         directory_button = tk.Button(self.root, text="Select 'messages' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
         directory_button.pack()
 
@@ -76,7 +75,8 @@ class GUI:
             if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
                 self.dump_messages.main(self.console_redirector)
             else:
-                print("Please fill in all fields.")
+                
+                print("\nPlease fill in all fields.")
 
         proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)
         proceed_button.pack()

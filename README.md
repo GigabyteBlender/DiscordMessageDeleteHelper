@@ -14,9 +14,6 @@ in the redirects URL that is located in the Oath2 section of your discord applic
 create a file called 'config.py' and this is what you need to add to your config.py file:
 
 CLIENT_ID = '...'  
-
 CLIENT_SECRET = '...'  
-
 REDIRECT_URI = 'http://localhost:8000/callback'  
-
 SCOPE = 'identify email'
