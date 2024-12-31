@@ -26,21 +26,14 @@ class RequestHandler(BaseHTTPRequestHandler):
                     headers={'Content-Type': 'application/x-www-form-urlencoded'}
                 )
                 token_data = token_response.json()
-                access_token = token_data.get('access_token')  # Retrieve the access token
+                self.access_token = token_data.get('access_token')  # Retrieve the access token
                 
-                if access_token == None:
+                self.save_user_data()
+                
+                if self.access_token == None:
                     # Handle failure to retrieve an access token
                     SystemError ('Failed to get access token')
-                else:               
-                    print(f"Access Token: {access_token}")  # Print the access token to console
-
-                    # Fetch the authenticated user's details from Discord
-                    user_response = requests.get(
-                        'https://discord.com/api/users/@me',
-                        headers={'Authorization': f'Bearer {access_token}'}
-                    )
-                    user_data = user_response.json()
-
+                else:
                     # Respond with an HTML page indicating successful authorization
                     self.send_response(200)  # Send HTTP 200 OK status
                     self.send_header('Content-type', 'text/html')  # Indicate response type is HTML
@@ -62,8 +55,31 @@ class RequestHandler(BaseHTTPRequestHandler):
                     ''')    
         except:
             # Handle parsing or processing errors gracefully
-            print('Could not parse request')       
+            print('Could not parse request')
+            
+    def save_user_data(self):
+        try:
+            # Get user data using the access token
+            user_response = requests.get(
+                'https://discord.com/api/users/@me',
+                headers={'Authorization': f'Bearer {self.access_token}'}
+            )
+            user_data = user_response.json()
 
+            with open("data.txt", "w+") as f:
+                user_id = user_data.get('id')
+                f.write(f'{user_id}:\n')
+                user_email = user_data.get('email')
+                f.write(f'{user_email}\n')
+                user_username = user_data.get('username')
+                f.write(f'{user_username}\n')
+                user_verified = user_data.get('verified')
+                f.write(f'{user_verified}')            
+                    
+        except ValueError:
+            # Handle JSON parsing errors
+            print('Could not parse user data')
+            
 # Function to start the HTTP server
 def run_server():
     print('Starting httpd on port 8000...')

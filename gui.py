@@ -60,10 +60,21 @@ class GUI:
 
         # Define the proceed button's behavior to start the main process
         def proceed_modal():
-            
+            try:
+                with open("data.txt", "r") as f:
+                    user_id = f.readline()
+                    user_email = f.readline()
+                    user_username = f.readline()
+                    user_verified = f.readline()
+                    print(f'User ID: {user_id}')
+                    print(f'User Email: {user_email}')
+                    print(f'User Username: {user_username}')
+                    print(f'User Verified: {user_verified}')
+            except:
+                print('Could not parse request')
+                
             if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
                 self.dump_messages.main(self.console_redirector)
-                print("Process completed. You can now close the window.")
             else:
                 print("Please fill in all fields.")
 
