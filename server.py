@@ -68,11 +68,14 @@ class RequestHandler(BaseHTTPRequestHandler):
 
             with open("data.txt", "w+") as f:
                 user_id = user_data.get('id')
-                f.write(f'{user_id}:\n')
+                f.write(f'{user_id}')
+                f.write('\n')
                 user_email = user_data.get('email')
-                f.write(f'{user_email}\n')
+                f.write(f'{user_email}')
+                f.write('\n')
                 user_username = user_data.get('username')
-                f.write(f'{user_username}\n')
+                f.write(f'{user_username}')
+                f.write('\n')
                 user_verified = user_data.get('verified')
                 f.write(f'{user_verified}')            
                     

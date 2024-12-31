@@ -76,7 +76,8 @@ class GUI:
             if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
                 self.dump_messages.main(self.console_redirector)
             else:
-                print("Please fill in all fields.")
+                
+                print("\nPlease fill in all fields.")
 
         proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)
         proceed_button.pack()
