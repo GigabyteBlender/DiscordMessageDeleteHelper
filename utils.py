@@ -109,6 +109,8 @@ class DumpAllMessages:
 
     # Main function to handle the complete dumping process
     def main(self, console_redirector) -> None:
+        self.console_redirector = console_redirector
+        
         try:
             # Dump messages and save them
             print("Sorting through messages...")
@@ -121,6 +123,6 @@ class DumpAllMessages:
             
 class serverOpen:
     def start_server_and_open_auth_url(self):
-            # Construct the Discord OAuth URL and open it in the web browser
-            auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
-            webbrowser.open(auth_url)
+        # Construct the Discord OAuth URL and open it in the web browser
+        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
+        webbrowser.open(auth_url)

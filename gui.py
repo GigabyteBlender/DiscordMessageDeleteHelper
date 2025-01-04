@@ -1,5 +1,4 @@
 import tkinter as tk
-import webbrowser
 import threading
 import server
 import concurrent.futures
