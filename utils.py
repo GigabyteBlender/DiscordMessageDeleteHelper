@@ -3,6 +3,8 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 from typing import Dict, List
+import webbrowser
+from config import CLIENT_ID, REDIRECT_URI, SCOPE
 
 # Redirects console output to a Tkinter text widget
 class ConsoleRedirector:
@@ -116,3 +118,9 @@ class DumpAllMessages:
         except Exception as e:
             # Handle unexpected errors
             print(f"An error occurred: {e}")
+            
+class serverOpen:
+    def start_server_and_open_auth_url(self):
+            # Construct the Discord OAuth URL and open it in the web browser
+            auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
+            webbrowser.open(auth_url)

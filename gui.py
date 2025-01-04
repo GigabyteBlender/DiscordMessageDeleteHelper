@@ -3,14 +3,14 @@ import webbrowser
 import threading
 import server
 import concurrent.futures
-from utils import DumpAllMessages, ConsoleRedirector
-from config import CLIENT_ID, REDIRECT_URI, SCOPE
+from utils import DumpAllMessages, ConsoleRedirector, serverOpen
 import sys
 
 class GUI:
     def __init__(self):
         # Initialize the message dumper and set up the main application window
         self.dump_messages = DumpAllMessages()
+        self.s_open = serverOpen()
         self.dump_messages.root = self.root = tk.Tk()
         self.root.title("Discord Message Dumper")
 
@@ -29,7 +29,7 @@ class GUI:
 
         # Add a button to initialize Discord OAuth process
         tk.Label(self.root, text="Initialize Discord OAuth").pack()
-        self.oauth_button = tk.Button(self.root, text="Initialize", command=lambda: [threading.Thread(target=self.start_server_and_open_auth_url).start()])
+        self.oauth_button = tk.Button(self.root, text="Initialize", command=lambda: [threading.Thread(target=self.s_open.start_server_and_open_auth_url).start()])
         self.oauth_button.pack()
         
         # Add UI elements for selecting input and output directories
@@ -81,24 +81,15 @@ class GUI:
 
         proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)
         proceed_button.pack()
-        
-    def run_parallel_http_server():
-        # Run the server in a separate thread to handle requests
-        executor = concurrent.futures.ThreadPoolExecutor()
-        executor.submit(server.run_server)
-        
-    run_parallel_http_server()
-
-    def start_server_and_open_auth_url(self):
-        # Construct the Discord OAuth URL and open it in the web browser
-        auth_url = f"https://discord.com/api/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope={SCOPE}"
-        webbrowser.open(auth_url)
 
     def run(self) -> None:
         # Start the Tkinter event loop
         self.root.mainloop()
 
 if __name__ == "__main__":
+    # Run the server in a separate thread to handle requests
+    executor = concurrent.futures.ThreadPoolExecutor()
+    executor.submit(server.run_server)
     # Create and run the GUI application
     gui = GUI()
     gui.run()
