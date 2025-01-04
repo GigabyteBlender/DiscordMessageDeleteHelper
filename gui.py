@@ -33,10 +33,11 @@ class GUI:
         self.oauth_button.pack()
         
         # Add UI elements for selecting input and output directories
-        tk.Label(self.root, text="Selected Directory: ").pack()
+        self.directory_label = tk.Label(self.root, text="Selected Directory: ")
+        self.directory_label.pack()
         directory_button = tk.Button(self.root, text="Select 'messages' Directory", command=lambda: self.dump_messages.select_directory(self.directory_label, directory_button))
         directory_button.pack()
-
+        
         self.save_directory_label = tk.Label(self.root, text="Save Directory: ")
         self.save_directory_label.pack()
         save_directory_button = tk.Button(self.root, text="Select Save Directory", command=lambda: self.dump_messages.select_save_directory(self.save_directory_label, save_directory_button))
@@ -59,23 +60,23 @@ class GUI:
 
         # Define the proceed button's behavior to start the main process
         def proceed_modal():
-            try:
-                with open("data.txt", "r") as f:
-                    user_id = f.readline()
-                    user_email = f.readline()
-                    user_username = f.readline()
-                    user_verified = f.readline()
-                    print(f'User ID: {user_id}')
-                    print(f'User Email: {user_email}')
-                    print(f'User Username: {user_username}')
-                    print(f'User Verified: {user_verified}')
-            except:
-                print('Could not parse request')
                 
             if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
                 self.dump_messages.main(self.console_redirector)
-            else:
                 
+                try:
+                    with open("data.txt", "r") as f:
+                        user_id = f.readline()
+                        user_email = f.readline()
+                        user_username = f.readline()
+                        user_verified = f.readline()
+                        print(f'User ID: {user_id}')
+                        print(f'User Email: {user_email}')
+                        print(f'User Username: {user_username}')
+                        print(f'User Verified: {user_verified}')
+                except:
+                    print('Could not parse request')     
+            else:  
                 print("\nPlease fill in all fields.")
 
         proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)

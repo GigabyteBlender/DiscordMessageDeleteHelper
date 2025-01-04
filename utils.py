@@ -29,14 +29,13 @@ class DumpAllMessages:
 
     # Saves messages to a text file
     def save_messages(self, messages: Dict[str, List[int]], save_path: str) -> None:
-        print('Creating file...')
+        print('Saving messages to messages.txt')
         file_path = os.path.join(save_path, "messages.txt")
         with open(file_path, "w+") as f:
             for channel_id, message_ids in messages.items():
                 # Only process valid numeric Discord channel IDs
                 if len(channel_id) == 18 and channel_id.isnumeric():
                     if channel_id not in self.exclude_channels:
-                        print(f'Saving messages from channel: {channel_id}')
                         f.write(f'{channel_id}:\n\n')  # Write channel ID
                         f.write(', '.join(map(str, message_ids)))  # Write message IDs
                         f.write('\n\n')
@@ -50,7 +49,6 @@ class DumpAllMessages:
         if not os.path.exists(file_path):  # Check if messages.json exists
             print(f'No messages found in: {path}')
             return messages
-        print(f'Dumping messages from: {path}')
         try:
             with open(file_path, 'r', encoding='utf8') as f:
                 messages_obj = json.load(f)
@@ -111,9 +109,10 @@ class DumpAllMessages:
     def main(self, console_redirector) -> None:
         try:
             # Dump messages and save them
+            print("Sorting through messages...")
             messages = self.dump_all()
             self.save_messages(messages, self.save_directory_path)
-            print("Dumped to messages.txt!")
+            print("Succesfully dumped to messages.txt\n")
         except Exception as e:
             # Handle unexpected errors
             print(f"An error occurred: {e}")
