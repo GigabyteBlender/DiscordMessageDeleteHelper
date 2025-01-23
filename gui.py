@@ -57,34 +57,34 @@ class GUI:
         self.console_redirector = ConsoleRedirector(self.console_output)
         sys.stdout = self.console_redirector
 
-        # Define the proceed button's behavior to start the main process
-        def proceed_modal():
-                
-            if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
-                self.dump_messages.main(self.console_redirector)
-                
-                try:
-                    with open("data.txt", "r") as f:
-                        user_data = [line.strip() for line in f.readlines()]
-                        if len(user_data) >= 4:
-                            user_id, user_email, user_username, user_verified = user_data[:4]
-                            print(f'User ID: {user_id}')
-                            print(f'User Email: {user_email}')
-                            print(f'User Username: {user_username}')
-                            print(f'User Verified: {user_verified}')
-                        else:
-                            print('Incomplete user data')
-                except Exception as e:
-                    print(f'Error reading data: {e}')
-            else:  
-                print("\nPlease fill in all fields.")
-
         proceed_button = tk.Button(self.root, text="Proceed", command=proceed_modal)
         proceed_button.pack()
 
     def run(self) -> None:
         # Start the Tkinter event loop
         self.root.mainloop()
+        
+# Define the proceed button's behavior to start the main process
+def proceed_modal(self):
+                
+    if self.dump_messages.directory_path and self.dump_messages.save_directory_path:
+        self.dump_messages.main(self.console_redirector)
+                
+        try:
+            with open("data.txt", "r") as f:
+                user_data = [line.strip() for line in f.readlines()]
+                if len(user_data) >= 4:
+                    user_id, user_email, user_username, user_verified = user_data[:4]
+                    print(f'User ID: {user_id}')
+                    print(f'User Email: {user_email}')
+                    print(f'User Username: {user_username}')
+                    print(f'User Verified: {user_verified}')
+                else:
+                    print('Incomplete user data')
+        except Exception as e:
+            print(f'Error reading data: {e}')
+    else:  
+        print("\nPlease fill in all fields.")
 
 if __name__ == "__main__":
     # Run the server in a separate thread to handle requests
