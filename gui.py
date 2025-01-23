@@ -65,16 +65,17 @@ class GUI:
                 
                 try:
                     with open("data.txt", "r") as f:
-                        user_id = f.readline()
-                        user_email = f.readline()
-                        user_username = f.readline()
-                        user_verified = f.readline()
-                        print(f'User ID: {user_id}')
-                        print(f'User Email: {user_email}')
-                        print(f'User Username: {user_username}')
-                        print(f'User Verified: {user_verified}')
-                except:
-                    print('Could not parse request')     
+                        user_data = [line.strip() for line in f.readlines()]
+                        if len(user_data) >= 4:
+                            user_id, user_email, user_username, user_verified = user_data[:4]
+                            print(f'User ID: {user_id}')
+                            print(f'User Email: {user_email}')
+                            print(f'User Username: {user_username}')
+                            print(f'User Verified: {user_verified}')
+                        else:
+                            print('Incomplete user data')
+                except Exception as e:
+                    print(f'Error reading data: {e}')
             else:  
                 print("\nPlease fill in all fields.")
 
