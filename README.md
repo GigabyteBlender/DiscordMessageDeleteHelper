@@ -50,6 +50,7 @@ Create a file called `config.py` and add the following:
 
 ```python
 CLIENT_ID = '...'
+#replace with your client and client secret IDs from the discord bot you make
 CLIENT_SECRET = '...'
 REDIRECT_URI = 'http://localhost:8000/callback'
 SCOPE = 'identify email'
