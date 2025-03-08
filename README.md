@@ -4,33 +4,30 @@ Discord Message Delete Helper is a Python application designed to assist users i
 
 ## Why was this made?
 
-Discord's approach to message deletion has been a source of frustration for many users. The platform currently does not provide an official method for bulk deleting messages, which has led to the development of workarounds and third-party solutions13.
+Discord's approach to message deletion has been a source of frustration for many users. The platform currently does not provide an official method for bulk deleting messages, which has led to the development of this tool.
 
-The reasons behind this decision are multifaceted:
+### Reasons Behind This Decision
 
-Preserving Context: Discord claims that retaining messages is necessary to maintain context in conversations, especially for collaborative projects or communities that rely on historical information.
+- **Preserving Context:** Discord claims that retaining messages is necessary to maintain context in conversations, especially for collaborative projects or communities that rely on historical information.
+- **Technical Limitations:** Mass deletion of messages can put a significant strain on Discord's database, which led to the removal of bulk deletion features in the past.
+- **Privacy and Security Concerns:** Discord's privacy policy prevents them from reviewing message content without cause, which complicates the process of verifying requests for mass deletion.
+- **Compliance with Regulations:** Discord must balance user requests with legal requirements like GDPR's Right to Erasure, which has led to changes in how they handle deletion requests.
 
-Technical Limitations: Mass deletion of messages can put a significant strain on Discord's database, which led to the removal of bulk deletion features in the past4.
-
-Privacy and Security Concerns: Discord's privacy policy prevents them from reviewing message content without cause, which complicates the process of verifying requests for mass deletion1.
-
-Compliance with Regulations: Discord must balance user requests with legal requirements like GDPR's Right to Erasure, which has led to changes in how they handle deletion requests1.
+### Discord's Measures
 
 To address these issues while still providing some level of control to users, Discord has implemented the following measures:
+- Allowing users to request their data package and submit message IDs for deletion.
+- Deleting messages on both sides in private DMs but retaining placeholders in server or group chats.
+- Gradually adapting their approach to GDPR compliance has affected how deletion requests are processed.
 
-Allowing users to request their data package and submit message IDs for deletion3.
+These measures, however, are often seen as inadequate by users who desire more control over their message history. The lack of an official bulk deletion feature has led to the creation of unofficial tools.
 
-Deleting messages on both sides in private DMs but retaining placeholders in server or group chats.
+In response to this demand, some users have developed methods to generate lists of message IDs from the data provided by Discord, which can then be submitted for deletion. This approach aims to provide users with more control over their message history.
 
-Gradually adapting their approach to GDPR compliance has affected how deletion requests are processed1.
-
-These measures, however, are often seen as inadequate by users who desire more control over their message history. The lack of an official bulk deletion feature has led to the creation of unofficial methods and tools, which can potentially violate Discord's terms of service and risk account suspension6.
-
-In response to this demand, some users have developed methods to generate lists of message IDs from the data provided by Discord, which can then be submitted for deletion. This approach aims to provide a compromise between 
-
-## Features
+## Application Features
 
 - **Generate Message ID List:** Easily compile a list of message IDs that you wish to delete.
+- **Discord Oath2:** Uses discord authentication to get the user data which can be used.
 - **User-Friendly:** Simple and intuitive interface for seamless user experience.
 - **Python-Based:** Leverages the power of Python for efficient processing.
 
@@ -56,3 +53,8 @@ CLIENT_ID = '...'
 CLIENT_SECRET = '...'
 REDIRECT_URI = 'http://localhost:8000/callback'
 SCOPE = 'identify email'
+```
+
+## Future Plans
+
+- **Generate Email to send to Discord:** By using the data that the application gets from Discord Oath2, I can use it to automatically send an Email to the discord team to ask for deletion of the messages.
