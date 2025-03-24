@@ -33,7 +33,7 @@ In response to this demand, some users have developed methods to generate lists 
 
 ## Usage
 
-1. **Run the Application:** Execute the Python script to start the application.
+1. **Run the Application:** Execute the Python gui.py script to start the application.
 2. **Select Messages:** Choose the messages you wish to delete.
 3. **Generate ID List:** The application will generate a list of message IDs.
 4. **Submit to Discord Support:** Use the generated list to request deletion from Discord support.

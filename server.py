@@ -1,7 +1,14 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import requests
 import urllib.parse
-from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
+import threading
+import time
+import os
+from config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI, SCOPE
+
+# Global variable to track if the server is running
+server_running = False
+httpd = None
 
 # Custom request handler to handle HTTP requests for the OAuth callback
 class RequestHandler(BaseHTTPRequestHandler):
@@ -26,14 +33,16 @@ class RequestHandler(BaseHTTPRequestHandler):
                     headers={'Content-Type': 'application/x-www-form-urlencoded'}
                 )
                 token_data = token_response.json()
-                self.access_token = token_data.get('access_token')  # Retrieve the access token
+                access_token = token_data.get('access_token')  # Retrieve the access token
                 
-                self.save_user_data()
-                
-                if self.access_token == None:
+                if access_token is None:
                     # Handle failure to retrieve an access token
-                    SystemError ('Failed to get access token')
+                    print('Failed to get access token')
+                    self.send_error(500, 'Failed to get access token')
                 else:
+                    # Save user data
+                    self.save_user_data(access_token)
+                    
                     # Respond with an HTML page indicating successful authorization
                     self.send_response(200)  # Send HTTP 200 OK status
                     self.send_header('Content-type', 'text/html')  # Indicate response type is HTML
@@ -42,53 +51,172 @@ class RequestHandler(BaseHTTPRequestHandler):
                     <html>
                         <head>
                             <title>Authorization Complete</title>
+                            <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    background-color: #36393F;
+                                    color: #FFFFFF;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    height: 100vh;
+                                    margin: 0;
+                                }
+                                .container {
+                                    background-color: #2C2F33;
+                                    padding: 30px;
+                                    border-radius: 8px;
+                                    text-align: center;
+                                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                                }
+                                h1 {
+                                    color: #7289DA;
+                                    margin-bottom: 20px;
+                                }
+                                p {
+                                    margin-bottom: 20px;
+                                }
+                                button {
+                                    background-color: #7289DA;
+                                    color: white;
+                                    border: none;
+                                    padding: 10px 20px;
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                }
+                                button:hover {
+                                    background-color: #5b6eae;
+                                }
+                            </style>
                         </head>
                         <body>
-                            <h1>
-                                Authorization Complete. You can now close this window.
-                            </h1>
+                            <div class="container">
+                                <h1>Authorization Complete</h1>
+                                <p>You have successfully connected to Discord.</p>
+                                <p>You can now close this window and return to the application.</p>
+                                <button onclick="window.close()">Close Window</button>
+                            </div>
+                            <script>
+                                // Auto-close after 3 seconds
+                                setTimeout(function() {
+                                    window.close();
+                                }, 3000);
+                            </script>
                         </body>
-                        <script>
-                            JavaScript:window.close()
-                        </script>
                     </html>
-                    ''')    
-        except:
+                    ''')
+                    
+                    # Stop the server after successful authorization
+                    threading.Thread(target=self.stop_server).start()
+        except Exception as e:
             # Handle parsing or processing errors gracefully
-            print('Could not parse request')
-            
-    def save_user_data(self):
+            print(f'Error processing request: {e}')
+            self.send_error(500, f'Error processing request: {e}')
+    
+    def stop_server(self):
+        # Give the browser time to receive the response before stopping the server
+        time.sleep(1)
+        global httpd, server_running
+        if httpd:
+            server_running = False
+            httpd.shutdown()
+    
+    def save_user_data(self, access_token):
         try:
             # Get user data using the access token
             user_response = requests.get(
                 'https://discord.com/api/users/@me',
-                headers={'Authorization': f'Bearer {self.access_token}'}
+                headers={'Authorization': f'Bearer {access_token}'}
             )
             user_data = user_response.json()
 
             with open("data.txt", "w+") as f:
-                user_id = user_data.get('id')
-                f.write(f'{user_id}')
-                f.write('\n')
-                user_email = user_data.get('email')
-                f.write(f'{user_email}')
-                f.write('\n')
-                user_username = user_data.get('username')
-                f.write(f'{user_username}')
-                f.write('\n')
-                user_verified = user_data.get('verified')
-                f.write(f'{user_verified}')            
-                    
-        except ValueError:
+                user_id = user_data.get('id', 'Unknown')
+                user_email = user_data.get('email', 'Unknown')
+                user_username = user_data.get('username', 'Unknown')
+                user_verified = user_data.get('verified', False)
+                
+                f.write(f'{user_id}\n{user_email}\n{user_username}\n{user_verified}')
+                
+            print(f"User data saved: {user_username} ({user_email})")
+        except Exception as e:
             # Handle JSON parsing errors
-            print('Could not parse user data')
-            
+            print(f'Error saving user data: {e}')
+
+    # Override log_message to suppress server logs or redirect them
+    def log_message(self, format, *args):
+        # Customize logging format if needed
+        print(f"Server: {format % args}")
+
 # Function to start the HTTP server
 def run_server():
-    print('Starting httpd on port 8000...')
+    global httpd, server_running
+    
+    # Don't start if already running
+    if server_running:
+        print('Server is already running')
+        return
+    
+    print('Starting server on port 8000...')
     server_address = ('', 8000)  # Bind to all available interfaces on port 8000
-    httpd = HTTPServer(server_address, RequestHandler)  # Initialize HTTP server with custom handler
-    httpd.serve_forever()  # Run the server indefinitely
+    
+    try:
+        # Initialize HTTP server with custom handler
+        httpd = HTTPServer(server_address, RequestHandler)
+        server_running = True
+        
+        # Run the server until stop_server is called
+        httpd.serve_forever()
+        
+        print('Server has stopped')
+    except Exception as e:
+        print(f'Error starting server: {e}')
+    finally:
+        server_running = False
+
+# Function to check if authentication has completed
+def check_auth_status():
+    # Check if data.txt exists and contains valid user data
+    if os.path.exists("data.txt"):
+        try:
+            with open("data.txt", "r") as f:
+                lines = f.readlines()
+                if len(lines) >= 3:
+                    return True
+        except Exception as e:
+            print(f"Error reading auth data: {e}")
+    
+    return False
+
+# Function to get current authentication status
+def get_user_info():
+    if os.path.exists("data.txt"):
+        try:
+            with open("data.txt", "r") as f:
+                user_data = [line.strip() for line in f.readlines()]
+                if len(user_data) >= 3:
+                    return {
+                        "id": user_data[0],
+                        "email": user_data[1],
+                        "username": user_data[2],
+                        "verified": user_data[3] if len(user_data) > 3 else "False"
+                    }
+        except Exception as e:
+            print(f"Error reading user data: {e}")
+    
+    return None
+
+# Function to clear authentication data
+def clear_auth_data():
+    if os.path.exists("data.txt"):
+        try:
+            os.remove("data.txt")
+            return True
+        except Exception as e:
+            print(f"Error clearing auth data: {e}")
+    
+    return False
 
 # Run the server if this script is executed directly
 if __name__ == "__main__":
