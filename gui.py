@@ -57,24 +57,84 @@ class ModernGUI:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
     
     def set_theme(self):
-        # Define colors
-        self.bg_color = "#2C2F33"  # Discord dark theme
+        # Define a consistent color palette
+        self.bg_color = "#2C2F33"      # Dark background
         self.accent_color = "#7289DA"  # Discord blurple
-        self.text_color = "#FFFFFF"
-        
+        self.text_color = "#FFFFFF"    # White text
+        self.secondary_bg = "#23272A"  # Slightly darker background for contrast
+        self.border_color = "#2C2F33"  # Grey border color
+
         style = ttk.Style()
         style.theme_use('clam')
         
-        # Configure common styles
-        style.configure('TFrame', background=self.bg_color)
-        style.configure('TLabel', background=self.bg_color, foreground=self.text_color)
-        style.configure('TButton', background=self.accent_color, foreground=self.text_color)
-        style.configure('TNotebook', background=self.bg_color)
-        style.configure('TNotebook.Tab', background=self.bg_color, foreground=self.text_color, padding=[10, 5])
-        style.map('TNotebook.Tab', background=[('selected', self.accent_color)])
+        # Configure common styles with consistent theming
+        style.configure('TFrame', 
+                        background=self.bg_color, 
+                        bordercolor=self.secondary_bg, 
+                        borderwidth=1)
         
-        # Set root window color
-        self.root.configure(bg=self.bg_color)
+        style.configure('TLabel', 
+                        background=self.secondary_bg, 
+                        foreground=self.text_color, 
+                        font=('Helvetica', 10))
+        
+        # Button styling with grey border
+        style.configure('TButton', 
+                        background=self.accent_color, 
+                        foreground=self.text_color,
+                        font=('Helvetica', 10),
+                        bordercolor=self.secondary_bg,
+                        borderwidth=1)
+        style.map('TButton', 
+                background=[('active', '#5b6eae')],
+                foreground=[('active', self.text_color)])
+        
+        # Notebook (tab) styling
+        style.configure('TNotebook', 
+                        background=self.bg_color, 
+                        bordercolor=self.bg_color,
+                        borderwidth=1)
+        style.configure('TNotebook.Tab', 
+                        background=self.secondary_bg, 
+                        foreground=self.text_color, 
+                        padding=[10, 5],
+                        bordercolor=self.border_color,
+                        borderwidth=1)
+        style.map('TNotebook.Tab', 
+                background=[('selected', self.accent_color)],
+                foreground=[('selected', self.text_color)])
+        
+        # LabelFrame styling with grey border
+        style.configure('TLabelframe', 
+                        background=self.secondary_bg, 
+                        foreground=self.secondary_bg,
+                        bordercolor=self.secondary_bg,
+                        borderwidth=0)
+        style.configure('TLabelframe.Label', 
+                        background=self.secondary_bg, 
+                        foreground=self.accent_color)
+        
+        # Entry widget styling with grey border
+        style.configure('TEntry', 
+                        background=self.secondary_bg, 
+                        foreground=self.text_color,
+                        fieldbackground=self.secondary_bg,
+                        bordercolor=self.secondary_bg,
+                        borderwidth=0)
+        
+        # Scrollbar styling
+        style.configure('TScrollbar', 
+                        background=self.secondary_bg,
+                        bordercolor=self.bg_color,
+                        arrowcolor=self.text_color)
+        
+        # Set root window color and border
+        self.root.configure(
+            bg=self.secondary_bg, 
+            highlightbackground=self.bg_color, 
+            highlightcolor=self.bg_color, 
+            highlightthickness=0
+        )
     
     def setup_setup_tab(self):
         # Create a frame to organize widgets with spacing

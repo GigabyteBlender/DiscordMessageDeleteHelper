@@ -76,18 +76,6 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 p {
                                     margin-bottom: 20px;
                                 }
-                                button {
-                                    background-color: #7289DA;
-                                    color: white;
-                                    border: none;
-                                    padding: 10px 20px;
-                                    border-radius: 4px;
-                                    cursor: pointer;
-                                    font-size: 16px;
-                                }
-                                button:hover {
-                                    background-color: #5b6eae;
-                                }
                             </style>
                         </head>
                         <body>
@@ -95,13 +83,12 @@ class RequestHandler(BaseHTTPRequestHandler):
                                 <h1>Authorization Complete</h1>
                                 <p>You have successfully connected to Discord.</p>
                                 <p>You can now close this window and return to the application.</p>
-                                <button onclick="window.close()">Close Window</button>
                             </div>
                             <script>
-                                // Auto-close after 3 seconds
-                                setTimeout(function() {
+                                // Use window.close only if this is a popup/new window
+                                if (window.opener) {
                                     window.close();
-                                }, 3000);
+                                }
                             </script>
                         </body>
                     </html>
