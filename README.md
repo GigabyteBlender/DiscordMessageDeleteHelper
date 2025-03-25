@@ -24,38 +24,88 @@ These measures, however, are often seen as inadequate by users who desire more c
 
 In response to this demand, some users have developed methods to generate lists of message IDs from the data provided by Discord, which can then be submitted for deletion. This approach aims to provide users with more control over their message history.
 
-## Application Features
+## Features
 
-- **Generate Message ID List:** Easily compile a list of message IDs that you wish to delete.
-- **Discord Oath2:** Uses discord authentication to get the user data which can be used.
-- **User-Friendly:** Simple and intuitive interface for seamless user experience.
-- **Python-Based:** Leverages the power of Python for efficient processing.
+- **Discord OAuth2 Authentication:** Securely connect to your Discord account
+- **Message ID List Generation:** Compile a comprehensive list of message IDs for deletion
+- **User-Friendly GUI:** Intuitive interface with multiple tabs for setup, console output, and help
+- **Customizable Message Dumping:** 
+  - Select specific message directories
+  - Exclude specific channel IDs
+  - Save message ID list to a chosen directory
 
-## Usage
+## Prerequisites
 
-1. **Run the Application:** Execute the Python gui.py script to start the application.
-2. **Select Messages:** Choose the messages you wish to delete.
-3. **Generate ID List:** The application will generate a list of message IDs.
-4. **Submit to Discord Support:** Use the generated list to request deletion from Discord support.
+- Python 3.x
+- PyQt5
+- Requests library
+- Discord Developer Account
 
-## Bot Configuration
+## Setup
 
-1. Visit [Discord Developer Portal](https://discord.com/developers/applications/).
-2. In `config.py`, add your application client ID and client secret.
-3. Include `http://localhost:8000/callback` in the redirect URLs located in the OAuth2 section of your Discord application.
+### 1. Discord Application Configuration
 
-## Config Setup
+1. Visit [Discord Developer Portal](https://discord.com/developers/applications/)
+2. Create a new application
+3. Navigate to the OAuth2 section
+4. Add `http://localhost:8000/callback` to your Redirect URIs
+5. Copy your Client ID and Client Secret
 
-Create a file called `config.py` and add the following:
+### 2. Configuration File
+
+Create a `config.py` file in the project root with the following content:
 
 ```python
-CLIENT_ID = '...'
-#replace with your client and client secret IDs from the discord bot you make
-CLIENT_SECRET = '...'
+CLIENT_ID = 'your_client_id_here'
+CLIENT_SECRET = 'your_client_secret_here'
 REDIRECT_URI = 'http://localhost:8000/callback'
 SCOPE = 'identify email'
 ```
 
-## Future Plans
+### 3. Dependencies Installation
 
-- **Generate Email to send to Discord:** By using the data that the application gets from Discord Oath2, I can use it to automatically send an Email to the discord team to ask for deletion of the messages.
+```bash
+pip install PyQt5 requests
+```
+
+## Usage
+
+1. **Run the Application:**
+   ```bash
+   python gui.py
+   ```
+
+2. **Authentication:**
+   - Click "Connect to Discord" button
+   - Authorize the application in your web browser
+   - Application will save basic user information
+
+3. **Select Directories:**
+   - Choose the directory containing your Discord message data
+   - Select a save directory for the message ID list
+   - Optionally exclude specific channel IDs
+
+4. **Generate Message ID List:**
+   - Click "Generate Message ID List"
+   - View progress in the Console tab
+   - Find the generated `messages.txt` in your chosen save directory
+
+5. **Submit to Discord:**
+   - Use the generated message ID list when contacting Discord Support
+
+## Troubleshooting
+
+- Ensure you have the latest version of Python
+- Verify your Discord application settings
+- Check that all dependencies are installed
+- Make sure you have the necessary permissions in your Discord account
+
+## Future Improvements
+
+- Automatic email generation for deletion requests
+- Enhanced error handling
+- Support for more complex message filtering
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
