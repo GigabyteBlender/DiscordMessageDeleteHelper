@@ -5,21 +5,36 @@ import webbrowser
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QTabWidget, QLabel, QPushButton, QLineEdit, QFileDialog, 
+    QTabWidget, QLabel, QPushButton, QLineEdit, QFileDialog,
     QTextEdit, QMessageBox, QStatusBar, QFormLayout, QGroupBox
 )
 from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
 
 import server
 import utils
 
+class ConsoleSignals(QObject):
+    write_signal = pyqtSignal(str)
+    
 class ConsoleRedirector:
-    def __init__(self, text_widget):
+    def __init__(self, text_widget: QTextEdit):
         self.text_widget = text_widget
+        self.signals = ConsoleSignals()
+        self.signals.write_signal.connect(self.safe_append)
 
     def write(self, message):
+        # Emit signal instead of directly modifying the widget
+        self.signals.write_signal.emit(message)
+
+    def safe_append(self, message):
+        # Safely append text to the widget
+        if not message.strip():  # Ignore empty messages
+            return
         self.text_widget.append(message)
+        self.text_widget.verticalScrollBar().setValue(
+            self.text_widget.verticalScrollBar().maximum()
+        )
 
     def flush(self):
         pass
