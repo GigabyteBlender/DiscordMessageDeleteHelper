@@ -1,8 +1,8 @@
 import json
 import os
 import tkinter as tk
-from tkinter import filedialog, messagebox
-from typing import Dict, List, Optional
+from tkinter import filedialog
+from typing import Dict, List
 import webbrowser
 from config import CLIENT_ID, REDIRECT_URI, SCOPE
 

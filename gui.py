@@ -1,383 +1,384 @@
-import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
-import threading
-import server
-import concurrent.futures
-from utils import DumpAllMessages, ConsoleRedirector, serverOpen
 import sys
 import os
+import concurrent.futures
+import webbrowser
 
-class ModernGUI:
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
+    QTabWidget, QLabel, QPushButton, QLineEdit, QFileDialog, 
+    QTextEdit, QMessageBox, QStatusBar, QFormLayout, QGroupBox
+)
+from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
+import server
+import utils
+
+class ConsoleRedirector:
+    def __init__(self, text_widget):
+        self.text_widget = text_widget
+
+    def write(self, message):
+        self.text_widget.append(message)
+
+    def flush(self):
+        pass
+
+class AuthThread(QThread):
+    auth_complete = pyqtSignal(dict)
+    status_update = pyqtSignal(str)
+
+    def run(self):
+        self.status_update.emit("Connecting to Discord...")
+        s_open = utils.serverOpen()
+        s_open.start_server_and_open_auth_url()
+        
+        while not s_open.is_auth_completed():
+            self.msleep(1000)
+        
+        try:
+            with open("data.txt", "r") as f:
+                lines = f.readlines()
+                if len(lines) >= 3:
+                    user_data = {
+                        "id": lines[0].strip(),
+                        "email": lines[1].strip(),
+                        "username": lines[2].strip()
+                    }
+                    self.auth_complete.emit(user_data)
+                    self.status_update.emit("Authentication successful")
+        except Exception as e:
+            self.status_update.emit(f"Authentication error: {e}")
+
+class MessageProcessThread(QThread):
+    process_complete = pyqtSignal(bool, str)
+    message_update = pyqtSignal(str)
+
+    def __init__(self, dump_messages):
+        super().__init__()
+        self.dump_messages = dump_messages
+
+    def run(self):
+        try:
+            self.message_update.emit("Starting to process messages...")
+            messages = self.dump_messages.dump_all()
+            self.dump_messages.save_messages(messages, self.dump_messages.save_directory_path)
+            save_path = os.path.join(self.dump_messages.save_directory_path, 'messages.txt')
+            self.process_complete.emit(True, f"Successfully generated message ID list to {save_path}")
+        except Exception as e:
+            self.process_complete.emit(False, f"An error occurred: {e}")
+            
+class DiscordMessageDumperGUI(QMainWindow):
     def __init__(self):
-        # Initialize the message dumper and set up the main application window
-        self.dump_messages = DumpAllMessages()
-        self.s_open = serverOpen()
-        self.root = tk.Tk()
-        self.dump_messages.root = self.root
-        self.root.title("Discord Message Dumper")
+        super().__init__()
+        self.setWindowTitle("Discord Message Dumper")
+        self.resize(600, 600)  # Increased initial window size
         
-        # Set theme and style
-        self.set_theme()
-        
-        # Function to center the window on the screen
-        def center_window(window, width, height):
-            screen_width = window.winfo_screenwidth()
-            screen_height = window.winfo_screenheight()
-            x = (screen_width - width) // 2
-            y = (screen_height - height) // 2
-            window.geometry(f"{width}x{height}+{x}+{y}")
+        # Initialize core components
+        self.dump_messages = utils.DumpAllMessages()
+        self.s_open = utils.serverOpen()
 
-        # Set window size and center it
-        window_width = 700
-        window_height = 700
-        center_window(self.root, window_width, window_height)
-        
-        # Create a notebook for tabbed interface
-        self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
+        # Central widget and main layout
+        central_widget = QWidget()
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(15)
+        self.setCentralWidget(central_widget)
+
+        # Tabbed interface with full-width tabs
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setStyleSheet("""
+            QTabBar::tab {
+                width: 201px;  /* Makes tabs fill equally */
+                height: 30px;  /* Slightly taller tabs */
+            }
+        """)
+        main_layout.addWidget(self.tab_widget)
+
         # Create tabs
-        self.setup_tab = ttk.Frame(self.notebook)
-        self.console_tab = ttk.Frame(self.notebook)
-        self.help_tab = ttk.Frame(self.notebook)
-        
-        self.notebook.add(self.setup_tab, text="Setup")
-        self.notebook.add(self.console_tab, text="Console")
-        self.notebook.add(self.help_tab, text="Help")
-        
-        # Setup the tabs
         self.setup_setup_tab()
         self.setup_console_tab()
         self.setup_help_tab()
-        
-        # Initialize status bar
-        self.status_var = tk.StringVar()
-        self.status_var.set("Ready")
-        self.status_bar = ttk.Label(self.root, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-    
-    def set_theme(self):
-        # Define a consistent color palette
-        self.bg_color = "#2C2F33"      # Dark background
-        self.accent_color = "#7289DA"  # Discord blurple
-        self.text_color = "#FFFFFF"    # White text
-        self.secondary_bg = "#23272A"  # Slightly darker background for contrast
-        self.border_color = "#2C2F33"  # Grey border color
 
-        style = ttk.Style()
-        style.theme_use('clam')
-        
-        # Configure common styles with consistent theming
-        style.configure('TFrame', 
-                        background=self.bg_color, 
-                        bordercolor=self.secondary_bg, 
-                        borderwidth=1)
-        
-        style.configure('TLabel', 
-                        background=self.secondary_bg, 
-                        foreground=self.text_color, 
-                        font=('Helvetica', 10))
-        
-        # Button styling with grey border
-        style.configure('TButton', 
-                        background=self.accent_color, 
-                        foreground=self.text_color,
-                        font=('Helvetica', 10),
-                        bordercolor=self.secondary_bg,
-                        borderwidth=1)
-        style.map('TButton', 
-                background=[('active', '#5b6eae')],
-                foreground=[('active', self.text_color)])
-        
-        # Notebook (tab) styling
-        style.configure('TNotebook', 
-                        background=self.bg_color, 
-                        bordercolor=self.bg_color,
-                        borderwidth=1)
-        style.configure('TNotebook.Tab', 
-                        background=self.secondary_bg, 
-                        foreground=self.text_color, 
-                        padding=[10, 5],
-                        bordercolor=self.border_color,
-                        borderwidth=1)
-        style.map('TNotebook.Tab', 
-                background=[('selected', self.accent_color)],
-                foreground=[('selected', self.text_color)])
-        
-        # LabelFrame styling with grey border
-        style.configure('TLabelframe', 
-                        background=self.secondary_bg, 
-                        foreground=self.secondary_bg,
-                        bordercolor=self.secondary_bg,
-                        borderwidth=0)
-        style.configure('TLabelframe.Label', 
-                        background=self.secondary_bg, 
-                        foreground=self.accent_color)
-        
-        # Entry widget styling with grey border
-        style.configure('TEntry', 
-                        background=self.secondary_bg, 
-                        foreground=self.text_color,
-                        fieldbackground=self.secondary_bg,
-                        bordercolor=self.secondary_bg,
-                        borderwidth=0)
-        
-        # Scrollbar styling
-        style.configure('TScrollbar', 
-                        background=self.secondary_bg,
-                        bordercolor=self.bg_color,
-                        arrowcolor=self.text_color)
-        
-        # Set root window color and border
-        self.root.configure(
-            bg=self.secondary_bg, 
-            highlightbackground=self.bg_color, 
-            highlightcolor=self.bg_color, 
-            highlightthickness=0
-        )
-    
+        # Status bar
+        self.statusBar = QStatusBar()
+        main_layout.addWidget(self.statusBar)
+        self.setStatusBar(self.statusBar)
+        self.update_status("Ready")
+
+        # Set dark theme
+        self.set_dark_theme()
+
+    def set_dark_theme(self):
+        # Dark color palette
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(53, 53, 53))
+        palette.setColor(QPalette.WindowText, Qt.white)
+        palette.setColor(QPalette.Base, QColor(25, 25, 25))
+        palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+        palette.setColor(QPalette.ToolTipBase, Qt.white)
+        palette.setColor(QPalette.ToolTipText, Qt.white)
+        palette.setColor(QPalette.Text, Qt.white)
+        palette.setColor(QPalette.Button, QColor(53, 53, 53))
+        palette.setColor(QPalette.ButtonText, Qt.white)
+        palette.setColor(QPalette.BrightText, Qt.red)
+        palette.setColor(QPalette.Link, QColor(42, 130, 218))
+        palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+        palette.setColor(QPalette.HighlightedText, Qt.black)
+
+        self.setPalette(palette)
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #2C2F33;
+                color: white;
+                font-size: 10pt;
+            }
+            QGroupBox {
+                border: 1px solid #7289DA;
+                margin-top: 10px;
+                font-weight: bold;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 3px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #7289DA;
+            }
+            QTabBar::tab {
+                background-color: #23272A;
+                color: white;
+                padding: 5px 15px;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background-color: #7289DA;
+                color: white;
+            }
+            QPushButton {
+                background-color: #7289DA;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                min-height: 25px;
+                border-radius: 8px;  /* This adds rounded corners */
+            }
+            QPushButton:hover {
+                background-color: #5b6eae;
+            }
+            QLineEdit, QTextEdit {
+                background-color: #36393F;
+                color: white;
+                border: 1px solid #23272A;
+                padding: 5px;
+            }
+        """)
+
     def setup_setup_tab(self):
-        # Create a frame to organize widgets with spacing
-        main_frame = ttk.Frame(self.setup_tab)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Title
-        title_label = ttk.Label(main_frame, text="Discord Message Delete Helper", font=("Helvetica", 16, "bold"))
-        title_label.pack(pady=10)
-        
-        # Section 1: Authentication
-        auth_frame = ttk.LabelFrame(main_frame, text="Discord Authentication")
-        auth_frame.pack(fill=tk.X, pady=10)
-        
-        auth_desc = ttk.Label(auth_frame, text="Connect to Discord to access your message data", wraplength=600)
-        auth_desc.pack(pady=5)
-        
-        self.oauth_button = ttk.Button(
-            auth_frame, 
-            text="Connect to Discord", 
-            command=lambda: [
-                self.update_status("Connecting to Discord..."),
-                threading.Thread(target=self.start_auth).start()
-            ]
-        )
-        self.oauth_button.pack(pady=10)
-        
-        self.user_info_label = ttk.Label(auth_frame, text="Not connected")
-        self.user_info_label.pack(pady=5)
-        
-        # Section 2: Directory Selection
-        dir_frame = ttk.LabelFrame(main_frame, text="Directory Selection")
-        dir_frame.pack(fill=tk.X, pady=10)
-        
-        # Input directory
-        input_frame = ttk.Frame(dir_frame)
-        input_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(input_frame, text="Messages Directory:").pack(side=tk.LEFT, padx=5)
-        self.directory_path_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.directory_path_var, width=40).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        ttk.Button(input_frame, text="Browse", command=self.select_input_directory).pack(side=tk.LEFT, padx=5)
-        
-        # Output directory
-        output_frame = ttk.Frame(dir_frame)
-        output_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(output_frame, text="Save Directory:").pack(side=tk.LEFT, padx=5)
-        self.save_directory_var = tk.StringVar()
-        ttk.Entry(output_frame, textvariable=self.save_directory_var, width=40).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        ttk.Button(output_frame, text="Browse", command=self.select_output_directory).pack(side=tk.LEFT, padx=5)
-        
-        # Section 3: Options
-        options_frame = ttk.LabelFrame(main_frame, text="Options")
-        options_frame.pack(fill=tk.X, pady=10)
-        
-        # Exclude channels
-        exclude_frame = ttk.Frame(options_frame)
-        exclude_frame.pack(fill=tk.X, pady=5)
-        
-        ttk.Label(exclude_frame, text="Exclude Channel IDs (comma-separated):").pack(side=tk.LEFT, padx=5)
-        self.exclude_channels_var = tk.StringVar()
-        ttk.Entry(exclude_frame, textvariable=self.exclude_channels_var, width=40).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
-        
-        # Process button
-        self.process_button = ttk.Button(
-            main_frame, 
-            text="Generate Message ID List", 
-            command=self.process_messages
-        )
-        self.process_button.pack(pady=20)
-    
-    def setup_console_tab(self):
-        console_frame = ttk.Frame(self.console_tab)
-        console_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Console header
-        ttk.Label(console_frame, text="Console Output", font=("Helvetica", 12, "bold")).pack(pady=5)
-        
-        # Console output text widget with scrollbar
-        console_subframe = ttk.Frame(console_frame)
-        console_subframe.pack(fill=tk.BOTH, expand=True)
-        
-        scrollbar = ttk.Scrollbar(console_subframe)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.console_output = tk.Text(console_subframe, width=70, height=20, wrap=tk.WORD, yscrollcommand=scrollbar.set)
-        self.console_output.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.console_output.yview)
-        
-        # Set text widget colors
-        self.console_output.config(bg="#36393F", fg="#FFFFFF", insertbackground="#FFFFFF")
-        
-        # Button to clear console
-        ttk.Button(console_frame, text="Clear Console", command=self.clear_console).pack(pady=10)
-        
-        # Redirect stdout to the console output area
-        self.console_redirector = ConsoleRedirector(self.console_output)
-        sys.stdout = self.console_redirector
-    
-    def setup_help_tab(self):
-        help_frame = ttk.Frame(self.help_tab)
-        help_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-        
-        # Help content
-        ttk.Label(help_frame, text="How to Use", font=("Helvetica", 14, "bold")).pack(pady=10)
-        
-        help_text = """
-1. Click "Connect to Discord" to authenticate with your Discord account.
+        setup_tab = QWidget()
+        setup_layout = QVBoxLayout(setup_tab)
+        setup_layout.setSpacing(10)
 
-2. Select the 'messages' directory from your Discord data package.
+        # Authentication Group
+        auth_group = QGroupBox("Discord Authentication")
+        auth_layout = QVBoxLayout(auth_group)
+        
+        self.oauth_button = QPushButton("Connect to Discord")
+        self.oauth_button.clicked.connect(self.start_auth)
+        self.user_info_label = QLabel("Not connected")
+        self.user_info_label.setAlignment(Qt.AlignCenter)
+        
+        auth_layout.addWidget(self.oauth_button)
+        auth_layout.addWidget(self.user_info_label)
+        setup_layout.addWidget(auth_group)
 
-3. Choose a directory where you want to save the generated message ID list.
+        # Directories Group
+        dir_group = QGroupBox("Directories")
+        dir_layout = QFormLayout(dir_group)
+        dir_layout.setSpacing(10)
 
-4. Optionally, enter channel IDs you want to exclude from processing.
+        # Input Directory
+        input_row = QHBoxLayout()
+        self.input_directory_edit = QLineEdit()
+        # Set a minimum width that's about twice the default
+        self.input_directory_edit.setMinimumWidth(400)  
+        input_browse_button = QPushButton("Browse")
+        input_browse_button.clicked.connect(self.select_input_directory)
+        
+        input_row.addWidget(self.input_directory_edit)
+        input_row.addWidget(input_browse_button)
+        dir_layout.addRow("Messages Directory:", input_row)
 
-5. Click "Generate Message ID List" to process your messages.
+        # Output Directory
+        output_row = QHBoxLayout()
+        self.output_directory_edit = QLineEdit()
+        # Set a minimum width that's about twice the default
+        self.output_directory_edit.setMinimumWidth(400)  
+        output_browse_button = QPushButton("Browse")
+        output_browse_button.clicked.connect(self.select_output_directory)
+        
+        output_row.addWidget(self.output_directory_edit)
+        output_row.addWidget(output_browse_button)
+        dir_layout.addRow("Save Directory:", output_row)
 
-6. The generated list will be saved as "messages.txt" in your selected save directory.
+        # Exclude Channels
+        self.exclude_channels_edit = QLineEdit()
+        # Set a minimum width that's about twice the default
+        self.exclude_channels_edit.setMinimumWidth(400)  
+        dir_layout.addRow("Exclude Channel IDs:", self.exclude_channels_edit)
 
-7. Submit this list to Discord Support to request message deletion.
-        """
+        setup_layout.addWidget(dir_group)
+
+        # Process Button
+        self.process_button = QPushButton("Generate Message ID List")
+        self.process_button.clicked.connect(self.process_messages)
+        setup_layout.addWidget(self.process_button)
+
+        # Add some stretch to push everything to the top
+        setup_layout.addStretch(1)
+
+        # Add tab
+        self.tab_widget.addTab(setup_tab, "Setup")
         
-        help_textbox = tk.Text(help_frame, height=15, wrap=tk.WORD)
-        help_textbox.pack(fill=tk.BOTH, expand=True, pady=10)
-        help_textbox.insert(tk.END, help_text)
-        help_textbox.config(state=tk.DISABLED, bg="#36393F", fg="#FFFFFF")
-        
-        # Links frame
-        links_frame = ttk.Frame(help_frame)
-        links_frame.pack(fill=tk.X, pady=10)
-        
-        ttk.Label(links_frame, text="Useful Links:", font=("Helvetica", 12, "bold")).pack(anchor=tk.W)
-        
-        link_texts = [
-            "Discord Developer Portal",
-            "Discord Support",
-            "How to Request Data Deletion"
-        ]
-        
-        for link in link_texts:
-            link_button = ttk.Button(links_frame, text=link, command=lambda l=link: self.open_link(l))
-            link_button.pack(anchor=tk.W, pady=2)
-    
-    def open_link(self, link_text):
-        # Define URLs for each link
-        links = {
-            "Discord Developer Portal": "https://discord.com/developers/applications/",
-            "Discord Support": "https://support.discord.com/",
-            "How to Request Data Deletion": "https://support.discord.com/hc/en-us/articles/360004027692"
-        }
-        
-        import webbrowser
-        webbrowser.open(links.get(link_text, "https://discord.com"))
-    
     def start_auth(self):
-        self.s_open.start_server_and_open_auth_url()
-        # Check for auth completion after a delay
-        self.root.after(2000, self.check_auth_status)
-    
-    def check_auth_status(self):
-        if os.path.exists("data.txt"):
-            try:
-                with open("data.txt", "r") as f:
-                    user_data = [line.strip() for line in f.readlines()]
-                    if len(user_data) >= 3:
-                        user_id, user_email, user_username = user_data[:3]
-                        self.user_info_label.config(text=f"Connected as: {user_username} ({user_email})")
-                        self.update_status("Authentication successful")
-                        return
-            except Exception as e:
-                print(f"Error reading auth data: {e}")
-        
-        # If auth not complete yet, check again after a delay
-        self.root.after(2000, self.check_auth_status)
-    
+        self.auth_thread = AuthThread()
+        self.auth_thread.auth_complete.connect(self.handle_auth_complete)
+        self.auth_thread.status_update.connect(self.update_status)
+        self.auth_thread.start()
+
+    def handle_auth_complete(self, user_data):
+        self.user_info_label.setText(f"Connected as: {user_data['username']} ({user_data['email']})")
+        self.oauth_button.setEnabled(False)
+
     def select_input_directory(self):
-        directory = filedialog.askdirectory()
+        directory = QFileDialog.getExistingDirectory(self, "Select Input Directory")
         if directory:
-            self.directory_path_var.set(directory)
+            self.input_directory_edit.setText(directory)
             self.dump_messages.directory_path = directory
             self.update_status(f"Selected input directory: {directory}")
-    
+
     def select_output_directory(self):
-        directory = filedialog.askdirectory()
+        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory")
         if directory:
-            self.save_directory_var.set(directory)
+            self.output_directory_edit.setText(directory)
             self.dump_messages.save_directory_path = directory
             self.update_status(f"Selected output directory: {directory}")
-    
+
     def process_messages(self):
-        # Check if all required fields are set
+        # Validate directories
         if not self.dump_messages.directory_path:
-            messagebox.showerror("Error", "Please select a messages directory first")
+            QMessageBox.critical(self, "Error", "Please select a messages directory first")
             return
             
         if not self.dump_messages.save_directory_path:
-            messagebox.showerror("Error", "Please select a save directory first")
+            QMessageBox.critical(self, "Error", "Please select a save directory first")
             return
         
         # Set exclude channels
-        exclude_channels_str = self.exclude_channels_var.get()
+        exclude_channels_str = self.exclude_channels_edit.text()
         if exclude_channels_str:
             self.dump_messages.exclude_channels = [channel.strip() for channel in exclude_channels_str.split(',')]
         
         # Switch to console tab
-        self.notebook.select(1)
+        self.tab_widget.setCurrentIndex(1)
         
-        # Process in a separate thread to avoid freezing the GUI
-        self.update_status("Processing messages...")
-        threading.Thread(target=self.process_messages_thread).start()
-    
-    def process_messages_thread(self):
-        try:
-            # Dump messages and save them
-            print("Starting to process messages...")
-            messages = self.dump_messages.dump_all()
-            self.dump_messages.save_messages(messages, self.dump_messages.save_directory_path)
-            print(f"Successfully generated message ID list to {os.path.join(self.dump_messages.save_directory_path, 'messages.txt')}")
-            
-            # Show success message
-            self.root.after(0, lambda: messagebox.showinfo("Success", "Message ID list has been generated successfully!"))
-            self.update_status("Process completed")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            self.root.after(0, lambda: messagebox.showerror("Error", f"An error occurred: {e}"))
-            self.update_status("Process failed")
-    
-    def clear_console(self):
-        self.console_output.delete(1.0, tk.END)
-    
-    def update_status(self, message):
-        self.status_var.set(message)
-    
-    def run(self):
-        # Start the Tkinter event loop
-        self.root.mainloop()
+        # Start processing in a thread
+        self.process_thread = MessageProcessThread(self.dump_messages)
+        self.process_thread.process_complete.connect(self.handle_process_complete)
+        self.process_thread.message_update.connect(print)
+        self.process_thread.start()
 
-if __name__ == "__main__":
-    # Run the server in a separate thread to handle requests
+    def handle_process_complete(self, success, message):
+        if success:
+            QMessageBox.information(self, "Success", message)
+        else:
+            QMessageBox.critical(self, "Error", message)
+
+    def clear_console(self):
+        self.console_output.clear()
+
+    def update_status(self, message):
+        self.statusBar.showMessage(message)
+
+    def setup_console_tab(self):
+        console_tab = QWidget()
+        console_layout = QVBoxLayout(console_tab)
+        console_layout.setSpacing(10)
+
+        # Console Output
+        self.console_output = QTextEdit()
+        self.console_output.setReadOnly(True)
+        self.console_output.setStyleSheet("""
+            background-color: #36393F;
+            color: white;
+        """)
+        console_layout.addWidget(self.console_output)
+
+        # Clear Console Button
+        clear_button = QPushButton("Clear Console")
+        clear_button.clicked.connect(self.clear_console)
+        console_layout.addWidget(clear_button)
+
+        # Redirect stdout
+        sys.stdout = ConsoleRedirector(self.console_output)
+
+        self.tab_widget.addTab(console_tab, "Console")
+
+    def setup_help_tab(self):
+        help_tab = QWidget()
+        help_layout = QVBoxLayout(help_tab)
+        help_layout.setSpacing(10)
+
+        # Help Text
+        help_text = QTextEdit()
+        help_text.setReadOnly(True)
+        help_text.setHtml("""
+        <h2 style='color: #7289DA;'>Discord Message Delete Helper</h2>
+        <p>Follow these steps to generate a list of message IDs for deletion:</p>
+        <ol>
+            <li>Click "Connect to Discord" to authenticate</li>
+            <li>Select your Discord messages directory</li>
+            <li>Choose a save directory for the message ID list</li>
+            <li>Optionally exclude specific channel IDs</li>
+            <li>Click "Generate Message ID List"</li>
+        </ol>
+        <p><strong>Note:</strong> The generated list can be submitted to Discord Support for message deletion.</p>
+        """)
+        help_layout.addWidget(help_text)
+
+        # Links Group
+        links_group = QGroupBox("Useful Links")
+        links_layout = QVBoxLayout(links_group)
+
+        link_texts = [
+            ("Discord Developer Portal", "https://discord.com/developers/applications/"),
+            ("Discord Support", "https://support.discord.com/"),
+            ("Data Deletion Request", "https://support.discord.com/hc/en-us/articles/360004027692")
+        ]
+
+        for link_text, url in link_texts:
+            link_button = QPushButton(link_text)
+            link_button.clicked.connect(lambda checked, u=url: webbrowser.open(u))
+            links_layout.addWidget(link_button)
+
+        help_layout.addWidget(links_group)
+        help_layout.addStretch(1)
+
+        self.tab_widget.addTab(help_tab, "Help")
+
+    # ... (rest of the methods remain the same as in the previous version)
+
+def main():
+    # Run the server in a separate thread
     executor = concurrent.futures.ThreadPoolExecutor()
     executor.submit(server.run_server)
     
     # Create and run the GUI application
-    gui = ModernGUI()
-    gui.run()
+    app = QApplication(sys.argv)
+    gui = DiscordMessageDumperGUI()
+    gui.show()
+    sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
