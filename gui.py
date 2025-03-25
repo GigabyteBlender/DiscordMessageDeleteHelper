@@ -104,7 +104,7 @@ class DiscordMessageDumperGUI(QMainWindow):
         self.tab_widget = QTabWidget()
         self.tab_widget.setStyleSheet("""
             QTabBar::tab {
-                width: 201px;  /* Makes tabs fill equally */
+                width: 100px;  /* Makes tabs fill equally */
                 height: 30px;  /* Slightly taller tabs */
             }
         """)
